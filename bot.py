@@ -50,11 +50,13 @@ class AdminButtons(discord.ui.View):
             await interaction.response.send_message("권한이 없습니다.", ephemeral=True)
             return
         
-        # 멤버가 모든 채팅방을 볼 수 있도록 권한 수정
+        # 멤버가 일반 채팅방만 볼 수 있도록 권한 수정 (비공개 방 제외)
         for channel in interaction.guild.text_channels:
-            await channel.set_permissions(self.member, read_messages=True)
+            # 입장- 으로 시작하는 비공개 방은 제외
+            if not channel.name.startswith("입장-"):
+                await channel.set_permissions(self.member, read_messages=True)
         
-        await interaction.response.send_message("보존되었습니다. 이제 모든 채팅방을 볼 수 있습니다.", ephemeral=True)
+        await interaction.response.send_message("보존되었습니다. 이제 일반 채팅방을 볼 수 있습니다.", ephemeral=True)
 
 class UserButtons(discord.ui.View):
     def __init__(self, channel, member):
