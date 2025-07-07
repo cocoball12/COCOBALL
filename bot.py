@@ -122,12 +122,32 @@ async def on_member_join(member):
     # 첫 번째 라미 관리자 선택
     admin = rami_members[0]
     
-    # 비공개 채널 생성
+    # 비공개 채널 생성 (완전 비공개)
     overwrites = {
-        guild.default_role: discord.PermissionOverwrite(read_messages=False),
-        member: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-        admin: discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        guild.default_role: discord.PermissionOverwrite(
+            read_messages=False,
+            send_messages=False,
+            view_channel=False
+        ),
+        member: discord.PermissionOverwrite(
+            read_messages=True,
+            send_messages=True,
+            view_channel=True
+        ),
+        admin: discord.PermissionOverwrite(
+            read_messages=True,
+            send_messages=True,
+            view_channel=True
+        )
     }
+    
+    # 라미 역할 전체에게도 권한 부여
+    if rami_role:
+        overwrites[rami_role] = discord.PermissionOverwrite(
+            read_messages=True,
+            send_messages=True,
+            view_channel=True
+        )
     
     channel_name = f"입장-{member.display_name}-{datetime.now().strftime('%m%d-%H%M')}"
     private_channel = await guild.create_text_channel(
@@ -143,6 +163,17 @@ async def on_member_join(member):
     
     for channel in guild.voice_channels:
         await channel.set_permissions(member, view_channel=True)
+    
+    # 환영 채널 삭제 (만약 다른 봇이 생성했다면)
+    welcome_channels = [ch for ch in guild.text_channels if ch.name.startswith(f"환영-{member.display_name}")]
+    for welcome_channel in welcome_channels:
+        try:
+            await welcome_channel.delete()
+            print(f"환영 채널 삭제됨: {welcome_channel.name}")
+        except discord.Forbidden:
+            print(f"환영 채널 삭제 권한 없음: {welcome_channel.name}")
+        except Exception as e:
+            print(f"환영 채널 삭제 중 오류: {e}")
     
     # 첫 번째 안내문구 전송
     embed1 = discord.Embed(
