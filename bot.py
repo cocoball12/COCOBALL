@@ -105,10 +105,13 @@ class UserButtons(discord.ui.View):
 async def on_ready():
     print(f'{bot.user} 봇이 준비되었습니다!')
     print(f'서버 수: {len(bot.guilds)}')
+    print(f'현재 작업 디렉토리: {os.getcwd()}')
+    print(f'파일 목록: {os.listdir(".")}')
 
 @bot.event
 async def on_member_join(member):
     guild = member.guild
+    print(f'새 멤버 입장: {member.display_name} ({member.id})')
     
     # 라미 역할을 가진 관리자 찾기
     rami_role = discord.utils.get(guild.roles, name=RAMI_ROLE_NAME)
@@ -123,6 +126,7 @@ async def on_member_join(member):
     
     # 첫 번째 라미 관리자 선택
     admin = rami_members[0]
+    print(f'선택된 관리자: {admin.display_name}')
     
     # 비공개 채널 생성 (완전 비공개)
     overwrites = {
@@ -152,19 +156,29 @@ async def on_member_join(member):
         )
     
     channel_name = f"입장-{member.display_name}-{datetime.now().strftime('%m%d-%H%M')}"
-    private_channel = await guild.create_text_channel(
-        name=channel_name,
-        overwrites=overwrites,
-        category=None
-    )
+    try:
+        private_channel = await guild.create_text_channel(
+            name=channel_name,
+            overwrites=overwrites,
+            category=None
+        )
+        print(f'비공개 채널 생성: {private_channel.name}')
+    except Exception as e:
+        print(f'채널 생성 실패: {e}')
+        return
     
     # 새 멤버 권한 설정: 음성채널만 보이게
-    for channel in guild.text_channels:
-        if channel != private_channel:
-            await channel.set_permissions(member, read_messages=False)
-    
-    for channel in guild.voice_channels:
-        await channel.set_permissions(member, view_channel=True)
+    try:
+        for channel in guild.text_channels:
+            if channel != private_channel:
+                await channel.set_permissions(member, read_messages=False)
+        
+        for channel in guild.voice_channels:
+            await channel.set_permissions(member, view_channel=True)
+        
+        print('멤버 권한 설정 완료')
+    except Exception as e:
+        print(f'권한 설정 실패: {e}')
     
     # 환영 채널 삭제 (만약 다른 봇이 생성했다면)
     welcome_channels = [ch for ch in guild.text_channels if ch.name.startswith(f"환영-{member.display_name}")]
@@ -184,20 +198,34 @@ async def on_member_join(member):
         color=0x00ff00
     )
     
-    admin_view = AdminButtons(private_channel, member)
-    message1 = await private_channel.send(f"{member.mention} {admin.mention}", embed=embed1, view=admin_view)
+    try:
+        admin_view = AdminButtons(private_channel, member)
+        message1 = await private_channel.send(f"{member.mention} {admin.mention}", embed=embed1, view=admin_view)
+        print('첫 번째 안내문구 전송 완료')
+    except Exception as e:
+        print(f'첫 번째 메시지 전송 실패: {e}')
     
     # 5초 후 두 번째 안내문구 전송
-    await asyncio.sleep(5)
-    
-    embed2 = discord.Embed(
-        title="📋 추가 안내사항",
-        description=SECOND_MESSAGE,
-        color=0x0099ff
-    )
-    
-    user_view = UserButtons(private_channel, member)
-    message2 = await private_channel.send(embed=embed2, view=user_view)
+    try:
+        await asyncio.sleep(5)
+        
+        embed2 = discord.Embed(
+            title="📋 추가 안내사항",
+            description=SECOND_MESSAGE,
+            color=0x0099ff
+        )
+        
+        user_view = UserButtons(private_channel, member)
+        message2 = await private_channel.send(embed=embed2, view=user_view)
+        print('두 번째 안내문구 전송 완료')
+    except Exception as e:
+        print(f'두 번째 메시지 전송 실패: {e}')
+
+@bot.event
+async def on_error(event, *args, **kwargs):
+    import traceback
+    print(f'오류 발생 - 이벤트: {event}')
+    print(traceback.format_exc())
 
 # 봇 실행
 if __name__ == "__main__":
@@ -208,5 +236,12 @@ if __name__ == "__main__":
         print("DISCORD_TOKEN 환경변수를 설정해주세요.")
         print("또는 아래 라인의 주석을 해제하고 직접 토큰을 입력하세요.")
         # TOKEN = "여기에_봇_토큰_입력"
+        exit(1)
     
-    bot.run(TOKEN)
+    print("봇 시작 중...")
+    try:
+        bot.run(TOKEN)
+    except Exception as e:
+        print(f"봇 실행 실패: {e}")
+        import traceback
+        traceback.print_exc()
