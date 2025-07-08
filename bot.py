@@ -1,3 +1,4 @@
+# bot.py
 import discord
 from discord.ext import commands
 import asyncio
@@ -106,7 +107,10 @@ async def on_ready():
     print(f'{bot.user} 봇이 준비되었습니다!')
     print(f'서버 수: {len(bot.guilds)}')
     print(f'현재 작업 디렉토리: {os.getcwd()}')
-    print(f'파일 목록: {os.listdir(".")}')
+    try:
+        print(f'파일 목록: {os.listdir(".")}')
+    except:
+        print('파일 목록 확인 실패')
 
 @bot.event
 async def on_member_join(member):
